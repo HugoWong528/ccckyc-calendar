@@ -1,0 +1,567 @@
+ <!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>學校校曆表 - 中華基督教會基元中學</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+HK:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: #1e293b;
+      --cell-bg: #131d31;
+      --border: #334155;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --success: #10b981;
+      --success-hover: #059669;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      --holiday-public: #ef4444;
+      --holiday-school: #f97316;
+      --event-school: #3b82f6;
+      --event-academic: #10b981;
+      --cycle-day-bg: #4f46e5;
+      --cycle-day-text: #e0e7ff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans HK', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    .container {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    /* Header */
+    .header {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 20px 24px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      gap: 16px;
+    }
+
+    .school-info h1 { font-size: 1.4rem; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+    .school-info p { color: var(--text-muted); font-size: 0.88rem; margin-top: 4px; }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: #334155;
+      border: 1px solid #475569;
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover { background: var(--primary); border-color: var(--primary); }
+
+    .btn-export {
+      background: var(--success);
+      border-color: var(--success);
+      color: #fff;
+    }
+    .btn-export:hover { background: var(--success-hover); border-color: var(--success-hover); }
+
+    .month-select {
+      background: #0f172a;
+      border: 1px solid #475569;
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Calendar Grid */
+    .calendar-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .weekdays, .grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .weekdays {
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .weekdays div:first-child { color: #f87171; }
+    .weekdays div:last-child { color: #94a3b8; }
+
+    .cell {
+      background: var(--cell-bg);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      min-height: 105px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      overflow: hidden;
+      position: relative;
+    }
+    .cell:hover {
+      background: #1e293b;
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+    .cell.other-month {
+      opacity: 0.25;
+      background: rgba(15, 23, 42, 0.5);
+      cursor: default;
+    }
+    .cell.other-month:hover { transform: none; box-shadow: none; border-color: rgba(255, 255, 255, 0.05); }
+    .cell.selected {
+      border: 2px solid var(--primary);
+      background: rgba(99, 102, 241, 0.12);
+    }
+    .cell.sunday .date-num { color: #f87171; }
+
+    .cell-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      min-height: 20px;
+    }
+
+    .date-num {
+      font-weight: 700;
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+    
+    .cycle-badge {
+      background: var(--cycle-day-bg);
+      color: var(--cycle-day-text);
+      font-size: 0.68rem;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .event-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: auto;
+      overflow: hidden;
+    }
+
+    .event-tag {
+      font-size: 0.72rem;
+      padding: 3px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    .tag-public_holiday { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-left: 3px solid var(--holiday-public); }
+    .tag-school_holiday { background: rgba(249, 115, 22, 0.2); color: #fdba74; border-left: 3px solid var(--holiday-school); }
+    .tag-school_event { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border-left: 3px solid var(--event-school); }
+    .tag-academic { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-left: 3px solid var(--event-academic); }
+
+    /* Side Panel */
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 20px;
+    }
+
+    .panel-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      color: #fff;
+    }
+    
+    .selected-date-title {
+      color: var(--primary);
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .selected-cycle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+    .selected-cycle b { color: #c7d2fe; }
+
+    .day-events {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .day-event-card {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      background: #0f172a;
+      border-left: 4px solid var(--primary);
+      line-height: 1.4;
+    }
+
+    .legend-list { display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem; }
+    .legend-item { display: flex; align-items: center; gap: 10px; }
+    .legend-indicator { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <header class="header">
+    <div class="school-info">
+      <h1>中華基督教會基元中學</h1>
+      <p>校曆表 (2026 - 2027 學年)</p>
+    </div>
+    <div class="nav-controls">
+      <button class="btn" onclick="changeMonth(-1)" title="上一個月">◀</button>
+      <select class="month-select" id="monthSelector" onchange="onMonthSelect(this.value)"></select>
+      <button class="btn" onclick="changeMonth(1)" title="下一個月">▶</button>
+      <button class="btn" onclick="jumpTo(2026, 8)">開學 (9月)</button>
+      <button class="btn btn-export" onclick="exportToICS()" title="下載可直接匯入 Google 日曆的 .ics 檔案">📥 匯出 Google 日曆 (.ics)</button>
+    </div>
+  </header>
+
+  <!-- Calendar Grid -->
+  <main class="calendar-card">
+    <div class="weekdays">
+      <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+    </div>
+    <div class="grid" id="calendarGrid"></div>
+  </main>
+
+  <!-- Side Panel -->
+  <aside class="side-panel">
+    <!-- Selected Day Detail -->
+    <div class="panel-card">
+      <div class="panel-title">日子詳細資料</div>
+      <div class="selected-date-title" id="detailDate">請點選日子</div>
+      <div class="selected-cycle" id="detailCycle">循環週次：-</div>
+      <div class="day-events" id="detailEvents">
+        <span style="color: var(--text-muted); font-size: 0.85rem;">當日冇特別活動 / 假期</span>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="panel-card">
+      <div class="panel-title">圖例說明 (Legend)</div>
+      <div class="legend-list">
+        <div class="legend-item"><div class="legend-indicator" style="background:var(--holiday-public)"></div> 公眾假期 (Public Holiday)</div>
+        <div class="legend-item"><div class="legend-indicator" style="background:var(--holiday-school)"></div> 學校假期 (School Holiday)</div>
+        <div class="legend-item"><div class="legend-indicator" style="background:var(--event-school)"></div> 學校活動 (School Event)</div>
+        <div class="legend-item"><div class="legend-indicator" style="background:var(--event-academic)"></div> 學術 / 考試 (Academic)</div>
+        <div class="legend-item"><div class="legend-indicator" style="background:var(--cycle-day-bg)"></div> 循環日 (Cycle Day I - VI)</div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  let calendarData = { events: [], cycleDays: {} };
+  let currentYear = 2026;
+  let currentMonth = 8; // September (0-indexed: 8 = 9月)
+
+  const monthOptions = [
+    { year: 2026, month: 7, label: "August 2026" },
+    { year: 2026, month: 8, label: "September 2026" },
+    { year: 2026, month: 9, label: "October 2026" },
+    { year: 2026, month: 10, label: "November 2026" },
+    { year: 2026, month: 11, label: "December 2026" },
+    { year: 2027, month: 0, label: "January 2027" },
+    { year: 2027, month: 1, label: "February 2027" },
+    { year: 2027, month: 2, label: "March 2027" },
+    { year: 2027, month: 3, label: "April 2027" },
+    { year: 2027, month: 4, label: "May 2027" },
+    { year: 2027, month: 5, label: "June 2027" },
+    { year: 2027, month: 6, label: "July 2027" },
+    { year: 2027, month: 7, label: "August 2027" }
+  ];
+
+  function initMonthSelector() {
+    const sel = document.getElementById('monthSelector');
+    sel.innerHTML = monthOptions.map(opt => `
+      <option value="${opt.year}-${opt.month}">${opt.label}</option>
+    `).join('');
+  }
+
+  async function loadCalendar() {
+    initMonthSelector();
+    try {
+      const res = await fetch('calendar.json');
+      calendarData = await res.json();
+    } catch (err) {
+      console.warn("無法從 calendar.json 讀取。");
+    }
+    renderCalendar();
+  }
+
+  function renderCalendar(selectTargetDate = 1) {
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
+
+    document.getElementById('monthSelector').value = `${currentYear}-${currentMonth}`;
+
+    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+    const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const prevMonthDays = new Date(currentYear, currentMonth, 0).getDate();
+
+    // 1. 上個月補齊格子
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const cell = document.createElement('div');
+      cell.className = 'cell other-month';
+      cell.innerHTML = `<div class="cell-top"><span class="date-num">${prevMonthDays - i}</span></div>`;
+      grid.appendChild(cell);
+    }
+
+    // 2. 當月所有日子
+    let defaultSelectStr = null;
+    for (let day = 1; day <= totalDays; day++) {
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      if (day === selectTargetDate) defaultSelectStr = dateStr;
+
+      const cellDate = new Date(currentYear, currentMonth, day);
+      const isSunday = cellDate.getDay() === 0;
+
+      const cell = document.createElement('div');
+      cell.className = `cell ${isSunday ? 'sunday' : ''}`;
+      cell.id = `day-${dateStr}`;
+      cell.onclick = () => selectDate(dateStr);
+
+      const cycle = calendarData.cycleDays ? calendarData.cycleDays[dateStr] : null;
+      const dayEvents = getEventsForDate(dateStr);
+
+      let topHtml = `<div class="cell-top"><span class="date-num">${day}</span>`;
+      if (cycle) {
+        topHtml += `<span class="cycle-badge">Day ${cycle}</span>`;
+      }
+      topHtml += `</div>`;
+
+      let eventsHtml = `<div class="event-list">`;
+      dayEvents.forEach(ev => {
+        eventsHtml += `<div class="event-tag tag-${ev.type}" title="${ev.title}">${ev.title}</div>`;
+      });
+      eventsHtml += `</div>`;
+
+      cell.innerHTML = topHtml + eventsHtml;
+      grid.appendChild(cell);
+    }
+
+    // 3. 下個月補齊格子
+    const totalRendered = firstDayIndex + totalDays;
+    const remainingDays = (7 - (totalRendered % 7)) % 7;
+    for (let i = 1; i <= remainingDays; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell other-month';
+      cell.innerHTML = `<div class="cell-top"><span class="date-num">${i}</span></div>`;
+      grid.appendChild(cell);
+    }
+
+    if (defaultSelectStr) selectDate(defaultSelectStr);
+  }
+
+  function getEventsForDate(dateStr) {
+    if (!calendarData.events) return [];
+    return calendarData.events.filter(ev => dateStr >= ev.startDate && dateStr <= ev.endDate);
+  }
+
+  function selectDate(dateStr) {
+    document.querySelectorAll('.cell.selected').forEach(el => el.classList.remove('selected'));
+    const activeCell = document.getElementById(`day-${dateStr}`);
+    if (activeCell) activeCell.classList.add('selected');
+
+    const cycle = calendarData.cycleDays ? calendarData.cycleDays[dateStr] : null;
+    const events = getEventsForDate(dateStr);
+
+    document.getElementById('detailDate').textContent = dateStr;
+    document.getElementById('detailCycle').innerHTML = cycle 
+      ? `循環週次：<b>Day ${cycle}</b>` 
+      : `循環週次：<span style="color:var(--text-muted)">非教學日 / 未設定</span>`;
+
+    const eventsContainer = document.getElementById('detailEvents');
+    if (events.length === 0) {
+      eventsContainer.innerHTML = `<span style="color: var(--text-muted); font-size: 0.85rem;">當日冇特別活動 / 假期</span>`;
+    } else {
+      eventsContainer.innerHTML = events.map(ev => `
+        <div class="day-event-card" style="border-left-color: var(--${ev.type.replace('_', '-')})">
+          <strong style="color:#fff;">${ev.title}</strong>
+          <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 3px;">
+            類別：${formatEventType(ev.type)}
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  function formatEventType(type) {
+    const map = {
+      'public_holiday': '公眾假期',
+      'school_holiday': '學校假期',
+      'school_event': '學校活動',
+      'academic': '學術 / 考試'
+    };
+    return map[type] || type;
+  }
+
+  function changeMonth(delta) {
+    currentMonth += delta;
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    renderCalendar();
+  }
+
+  function onMonthSelect(val) {
+    const [y, m] = val.split('-').map(Number);
+    currentYear = y;
+    currentMonth = m;
+    renderCalendar();
+  }
+
+  function jumpTo(year, month) {
+    currentYear = year;
+    currentMonth = month;
+    renderCalendar();
+  }
+
+  // ================= 匯出 Google 日曆 (.ics) 功能 =================
+  function exportToICS() {
+    if (!calendarData || (!calendarData.events && !calendarData.cycleDays)) {
+      alert("日曆資料尚未載入完成！");
+      return;
+    }
+
+    let icsContent = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//CCC Kei Yuen College//School Calendar 2026-2027//ZH",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "X-WR-CALNAME:基元中學校曆 (2026-2027)",
+      "X-WR-TIMEZONE:Asia/Hong_Kong"
+    ];
+
+    const formatDateICS = (dStr) => dStr.replace(/-/g, '');
+    const getNextDayICS = (dStr) => {
+      const [y, m, d] = dStr.split('-').map(Number);
+      const nextDate = new Date(Date.UTC(y, m - 1, d + 1));
+      return nextDate.toISOString().slice(0, 10).replace(/-/g, '');
+    };
+
+    // 1. 匯出所有 Cycle Day (全日活動)
+    if (calendarData.cycleDays) {
+      for (const [dateStr, cycle] of Object.entries(calendarData.cycleDays)) {
+        const dtStart = formatDateICS(dateStr);
+        const dtEnd = getNextDayICS(dateStr);
+        icsContent.push(
+          "BEGIN:VEVENT",
+          `UID:cycle-${dateStr}@keiyuen.edu.hk`,
+          `DTSTAMP:${dtStart}T000000Z`,
+          `DTSTART;VALUE=DATE:${dtStart}`,
+          `DTEND;VALUE=DATE:${dtEnd}`,
+          `SUMMARY:Day ${cycle}`,
+          `DESCRIPTION:中華基督教會基元中學 循環日：Day ${cycle}`,
+          "TRANSP:TRANSPARENT",
+          "END:VEVENT"
+        );
+      }
+    }
+
+    // 2. 匯出所有假期與活動
+    if (calendarData.events) {
+      calendarData.events.forEach((ev, idx) => {
+        const dtStart = formatDateICS(ev.startDate);
+        const dtEnd = getNextDayICS(ev.endDate);
+        icsContent.push(
+          "BEGIN:VEVENT",
+          `UID:event-${idx}-${dtStart}@keiyuen.edu.hk`,
+          `DTSTAMP:${dtStart}T000000Z`,
+          `DTSTART;VALUE=DATE:${dtStart}`,
+          `DTEND;VALUE=DATE:${dtEnd}`,
+          `SUMMARY:${ev.title}`,
+          `DESCRIPTION:類別: ${formatEventType(ev.type)}`,
+          "TRANSP:TRANSPARENT",
+          "END:VEVENT"
+        );
+      });
+    }
+
+    icsContent.push("END:VCALENDAR");
+
+    // 下載 .ics 檔案
+    const blob = new Blob([icsContent.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "keiyuen_calendar_2026_2027.ics";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  window.onload = loadCalendar;
+</script>
+</body>
+</html> 
